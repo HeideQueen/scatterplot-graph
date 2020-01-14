@@ -41,6 +41,25 @@ function generateScatterplotGraph(dataset) {
   const maxFullYear = new Date();
   maxFullYear.setFullYear(maxYear);
 
+  const xScale = d3
+    .scaleLinear()
+    .domain([d3.min(dataset, d => d.Year), d3.max(dataset, d => d.Year)])
+    .range([0, w]);
+
+  const yScale = d3
+    .scaleTime()
+    .domain([maxTime, minTime])
+    .range([h, 0]);
+
+  const xAxis = d3.axisBottom(xScale).tickFormat(d3.format('d'));
+  const yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat('%M:%S'));
+
+  const div = d3
+    .select('body')
+    .append('div')
+    .attr('id', 'tooltip')
+    .style('opacity', 0);
+
   const svg = d3
     .select('#scatterplot')
     .append('svg')
@@ -48,18 +67,6 @@ function generateScatterplotGraph(dataset) {
     .attr('height', h)
     .attr('overflow', 'visible');
 
-  const xScale = d3
-    .scaleTime()
-    .domain([minFullYear, maxFullYear])
-    .range([0, w]);
-
-  const yScale = d3
-    .scaleTime()
-    .domain([minTime, maxTime])
-    .range([h, 0]);
-
-  const xAxis = d3.axisBottom(xScale);
-  const yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat('%M:%S'));
   svg
     .append('g')
     .attr('id', 'x-axis')
@@ -79,5 +86,40 @@ function generateScatterplotGraph(dataset) {
     .append('circle')
     .attr('class', 'dot')
     .attr('data-xvalue', d => d.Year)
-    .attr('data-yvalue', d => d.Time);
+    .attr('data-yvalue', d => {
+      const time = new Date();
+      const minutes = d.Time.substring(0, 2);
+      const seconds = d.Time.substring(3, 5);
+      time.setMinutes(minutes);
+      time.setSeconds(seconds);
+      return time;
+    })
+    .attr('cx', d => xScale(d.Year))
+    .attr('cy', d => {
+      const time = new Date();
+      const minutes = d.Time.substring(0, 2);
+      const seconds = d.Time.substring(3, 5);
+      time.setMinutes(minutes);
+      time.setSeconds(seconds);
+      return yScale(time);
+    })
+    .attr('r', 5)
+    .on('mouseover', d => {
+      div
+        .attr('data-year', d.Year)
+        .transition()
+        .duration(0)
+        .style('opacity', 0.9);
+
+      div
+        .html(d.Name)
+        .style('left', `${d3.event.pageX}px`)
+        .style('top', `${d3.event.pageY}px`);
+    })
+    .on('mouseout', d => {
+      div
+        .transition()
+        .duration(0)
+        .style('opacity', 0);
+    });
 }
